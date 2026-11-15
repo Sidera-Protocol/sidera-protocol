@@ -37,6 +37,7 @@ import { parseMemoHint } from "./memo.js";
 import type {
   ExpiryResult,
   OwnedName,
+  MemoTypeChoice,
   ParsedMemo,
   RegisterParams,
   RegistryConfig,
@@ -138,6 +139,16 @@ function extractContractCode(tr: xdr.TransactionResult): number | null {
 interface ContractNameRecord {
   address: string;
   memo: string | null;
+  /** `["Inferred"]`, `["Id"]` or `["Text"]` (a unit enum); absent on old contracts. */
+  memo_type?: unknown;
+}
+
+/** The owner-stated memo type of a record, or `null` when not stated. */
+function statedMemoType(record: ContractNameRecord): "id" | "text" | null {
+  const raw = Array.isArray(record.memo_type) ? record.memo_type[0] : record.memo_type;
+  if (raw === "Id") return "id";
+  if (raw === "Text") return "text";
+  return null;
 }
 
 export class SideraClient {
@@ -188,7 +199,7 @@ export class SideraClient {
       throw errorFromCode(1, name);
     }
 
-    const memo: ParsedMemo | null = parseMemoHint(record.memo);
+    const memo: ParsedMemo | null = parseMemoHint(record.memo, statedMemoType(record));
     return {
       name,
       fullName: `${name}.sid`,
@@ -303,7 +314,7 @@ export class SideraClient {
       label,
       fullName: `${label}.${parent}.sid`,
       address: r.address,
-      memo: parseMemoHint(r.memo),
+      memo: parseMemoHint(r.memo, statedMemoType(r)),
     }));
   }
 
@@ -452,6 +463,34 @@ export class SideraClient {
       ],
       caller,
       `${label}.${parent}`,
+      options,
+    );
+  }
+
+  /**
+   * State how the memo of a name or subname (`alice`, `pay.alice`) must be
+   * sent: `"id"` (MEMO_ID), `"text"` (MEMO_TEXT, even if it is all digits),
+   * or `"inferred"` to clear it. `caller` must own the name (or the
+   * subname's parent) and sign. Changing the memo later clears the type.
+   * Returns the tx hash.
+   */
+  async setMemoType(
+    nameInput: string,
+    memoType: MemoTypeChoice,
+    caller: string,
+    options: RpcTxOptions = {},
+  ): Promise<string> {
+    const name = normalizeName(nameInput);
+    parseName(name);
+    const variant = { id: "Id", text: "Text", inferred: "Inferred" }[memoType];
+    if (variant == null) {
+      throw new SideraError("InvalidConfig", 'memoType must be "id", "text" or "inferred"');
+    }
+    return this.submitForHash(
+      "set_memo_type",
+      [scValString(name), addressScVal(caller), xdr.ScVal.scvVec([xdr.ScVal.scvSymbol(variant)])],
+      caller,
+      name,
       options,
     );
   }

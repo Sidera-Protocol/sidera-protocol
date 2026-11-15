@@ -32,7 +32,8 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
   const [label, setLabel] = useState("");
   const [address, setAddress] = useState(owner);
   const [memo, setMemo] = useState("");
-  const [idConfirmed, setIdConfirmed] = useState(false);
+  /** For a numeric memo: how the receiver expects it. Must be chosen. */
+  const [numericAs, setNumericAs] = useState<"id" | "text" | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -75,14 +76,14 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
         : null;
   const memoProblem = bytes(memo) > 28 ? "at most 28 bytes" : null;
   const kind = memoKind(memo);
-  const needsIdConfirm = kind === "id" && !idConfirmed;
+  const needsIdConfirm = kind === "id" && numericAs == null;
 
   async function addSubname() {
-    const ok = await run("add", () => saveSubname(owner, name, cleanLabel, address.trim(), memo));
+    const ok = await run("add", () => saveSubname(owner, name, cleanLabel, address.trim(), memo, kind === "id" ? numericAs : null));
     if (ok) {
       setLabel("");
       setMemo("");
-      setIdConfirmed(false);
+      setNumericAs(null);
     }
   }
 
@@ -120,7 +121,7 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
                   <p className="font-mono text-gray-100">{s.fullName}</p>
                   <p className="truncate font-mono text-xs text-gray-500">
                     {s.address}
-                    {s.memo ? ` · memo ${s.memo.value} (${s.memo.type === "id" ? "MEMO_ID" : "MEMO_TEXT"})` : ""}
+                    {s.memo ? ` · memo ${s.memo.value} (${s.memo.type === "id" ? "MEMO_ID" : "MEMO_TEXT"}${s.memo.stated ? ", stated" : ""})` : ""}
                   </p>
                 </div>
                 <button
@@ -152,7 +153,7 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
             value={memo}
             onChange={(e) => {
               setMemo(e.target.value);
-              setIdConfirmed(false);
+              setNumericAs(null);
             }}
             aria-describedby="subname-memo-kind"
             className={input}
@@ -172,17 +173,23 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
                 Wallets will send this memo as <b>MEMO_TEXT</b>, exactly as typed.
               </p>
             ) : (
-              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-200">
-                <p>
-                  Wallets will send <code className="font-mono">{memo}</code> as a <b>MEMO_ID</b> (a number), not as text.
-                  Sidera cannot send a number as MEMO_TEXT yet. If the receiver expects this deposit memo as text, a
-                  payment to this name may not be credited, so don&apos;t save it.
-                </p>
-                <label className="mt-2 flex items-center gap-2">
-                  <input type="checkbox" checked={idConfirmed} onChange={(e) => setIdConfirmed(e.target.checked)} />
-                  The receiver accepts this memo as a MEMO_ID
+              <fieldset className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-200">
+                <legend className="px-1">
+                  <code className="font-mono">{memo}</code> is a number. How does the receiver expect it?
+                </legend>
+                <label className="mt-1 flex items-center gap-2">
+                  <input type="radio" name="numeric-memo" checked={numericAs === "id"} onChange={() => setNumericAs("id")} />
+                  As a <b>MEMO_ID</b> (a number)
                 </label>
-              </div>
+                <label className="mt-1 flex items-center gap-2">
+                  <input type="radio" name="numeric-memo" checked={numericAs === "text"} onChange={() => setNumericAs("text")} />
+                  As <b>MEMO_TEXT</b> (text, exactly as typed)
+                </label>
+                <p className="mt-1 text-amber-200/80">
+                  Check the receiver&apos;s deposit instructions: the wrong type means the deposit may not be credited. Saving
+                  asks for two approvals in Freighter, one for the subname and one for its memo type.
+                </p>
+              </fieldset>
             )}
           </div>
         )}

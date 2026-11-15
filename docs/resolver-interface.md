@@ -8,9 +8,12 @@ The contract every Sidera-compatible wallet and payment app codes against.
 fn resolve(env: Env, name: String) -> Result<Resolution, RegistryError>;
 
 struct Resolution {
-    address: MuxedAddress,  // G-, M- or C-address receiving the payment
-    memo:    Option<String> // memo hint required by the destination
+    address:   MuxedAddress,   // G-, M- or C-address receiving the payment
+    memo:      Option<String>, // memo hint required by the destination
+    memo_type: MemoType,       // Inferred, or as the owner stated it
 }
+
+enum MemoType { Inferred, Id, Text }
 ```
 
 `address` is a `MuxedAddress`, so a muxed (M-) destination resolves exactly
@@ -87,10 +90,25 @@ fn price(env: Env, name: String, years: u32) -> Result<i128, RegistryError>;
 - A stored memo is 1–28 bytes, the size of a Stellar text memo. `register`
   and `set_address` refuse anything else with `InvalidMemo` (code 11), so
   every stored memo can be sent exactly as written.
-- The registry stores the memo as a string. Wallets choose the Stellar memo
-  type from it: digits with no leading zero that fit in a u64 are sent as
+- The registry stores the memo as a string, with a `memo_type`. `Id` and
+  `Text` are stated by the owner: send the memo as that type. `Inferred`
+  (the default, and every record written before memo types existed) means
+  wallets choose: digits with no leading zero that fit in a u64 are sent as
   `MEMO_ID`; everything else (letters, spaces, leading zeros, larger numbers)
   as `MEMO_TEXT`, byte for byte. Never trim or shorten a memo.
+
+```rust
+fn set_memo_type(env: Env, name: String, caller: Address, memo_type: MemoType)
+    -> Result<(), RegistryError>;
+```
+
+- `name` is a name or a subname (`pay.alice`). `caller` must own it (for a
+  subname, its parent) while it is active, or the call fails with
+  `Unauthorized`, `NotFound` or `NameExpired`.
+- `Id` requires the memo to be a u64 in canonical decimal, and both `Id` and
+  `Text` require a memo; otherwise `InvalidMemo`. `Inferred` clears it.
+- `set_address` and `set_subname` keep a stated type when the memo stays the
+  same, and reset it to `Inferred` when the memo changes.
 
 ## Listing an owner's names
 

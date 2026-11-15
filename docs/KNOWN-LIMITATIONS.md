@@ -37,14 +37,13 @@ not a hidden gap.
   registration itself is not lost. To keep a name live, renew or update it,
   or submit a `resolve` or a `stellar contract extend` for its entries before
   the TTL runs out.
-- **The memo type is inferred, not stored.** A memo is stored as text, and
-  wallets send digits (no leading zero, fits a u64) as `MEMO_ID` and anything
-  else as `MEMO_TEXT`. An exchange that expects a numeric memo as
-  `MEMO_TEXT` cannot say so yet, so don't use Sidera for that exchange's
-  deposits. The dashboard's subname form shows which type each memo will be
-  sent as, and won't save a numeric memo until the owner confirms the
-  receiver accepts a `MEMO_ID`. `MEMO_HASH` and `MEMO_RETURN` are not
-  supported.
+- **A memo type is only as good as the owner states it.** Unless the owner
+  states it with `set_memo_type`, wallets infer the type: digits (no leading
+  zero, fits a u64) go as `MEMO_ID` and anything else as `MEMO_TEXT`. The
+  dashboard asks for the type of every numeric subname memo and saves it,
+  but names and subnames set up through the contract or SDK directly keep
+  the inferred type until their owner states one. Changing a memo clears its
+  stated type. `MEMO_HASH` and `MEMO_RETURN` are not supported.
 - **A name that pays a muxed (M-) address can't be a primary name.** Reverse
   resolution maps a plain account to a name. A name pointing to
   `M…` (a virtual account of `G…`) doesn't point to `G…` itself, so `G…`

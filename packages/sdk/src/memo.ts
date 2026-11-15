@@ -25,11 +25,25 @@ const U64_MAX = 18446744073709551615n;
  *
  * @throws `SideraError` with code `MemoTooLong`.
  */
-export function parseMemoHint(raw: string | null | undefined): ParsedMemo | null {
+export function parseMemoHint(
+  raw: string | null | undefined,
+  stated: "id" | "text" | null = null,
+): ParsedMemo | null {
   if (raw == null || raw.length === 0) {
     return null;
   }
-  if (/^(0|[1-9]\d{0,19})$/.test(raw) && BigInt(raw) <= U64_MAX) {
+  const isU64 = /^(0|[1-9]\d{0,19})$/.test(raw) && BigInt(raw) <= U64_MAX;
+  if (stated === "id") {
+    if (!isU64) {
+      // The registry refuses this, so it means a bad record: never guess.
+      throw new SideraError(
+        "InvalidMemo",
+        "This destination's memo is marked MEMO_ID but is not a u64. Do not send: ask the recipient for a valid memo.",
+      );
+    }
+    return { type: "id", value: raw, stated: true };
+  }
+  if (stated == null && isU64) {
     return { type: "id", value: raw };
   }
   if (Buffer.byteLength(raw, "utf8") > MAX_MEMO_TEXT_BYTES) {
@@ -39,7 +53,7 @@ export function parseMemoHint(raw: string | null | undefined): ParsedMemo | null
         "attached without changing it. Do not send: ask the recipient for a valid memo.",
     );
   }
-  return { type: "text", value: raw };
+  return stated === "text" ? { type: "text", value: raw, stated: true } : { type: "text", value: raw };
 }
 
 /**

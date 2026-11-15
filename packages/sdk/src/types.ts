@@ -68,7 +68,18 @@ export interface ParsedMemo {
   type: "id" | "text";
   /** The memo payload (numeric string for `id`). */
   value: string;
+  /**
+   * `true` when the name's owner stated the type with `setMemoType`.
+   * Absent when it was inferred (digits that fit a u64 → `id`, else `text`).
+   */
+  stated?: true;
 }
+
+/**
+ * The memo type an owner can state for a name with `setMemoType`.
+ * `inferred` clears a stated type, so wallets infer it again.
+ */
+export type MemoTypeChoice = "id" | "text" | "inferred";
 
 /** Parameters for registering a name. */
 export interface RegisterParams {

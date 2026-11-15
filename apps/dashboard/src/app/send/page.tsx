@@ -130,7 +130,7 @@ export default function SendPage() {
                     <span className="flex items-center gap-2 text-emerald-400">
                       <ShieldCheck className="h-4 w-4" aria-hidden />
                       <code className="rounded bg-space-800 px-2 py-0.5 font-mono text-gray-100">{review.memo.value}</code>
-                      <span className="text-xs text-gray-400">({review.memo.type === "id" ? "MEMO_ID" : "MEMO_TEXT"}) required, attached automatically</span>
+                      <span className="text-xs text-gray-400">({review.memo.type === "id" ? "MEMO_ID" : "MEMO_TEXT"}{review.memo.stated ? ", as the receiver specified" : ""}) required, attached automatically</span>
                     </span>
                   ) : (
                     <span className="text-gray-400">none: a direct payment to this address</span>
