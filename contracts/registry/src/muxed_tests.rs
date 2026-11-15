@@ -74,7 +74,8 @@ fn a_muxed_destination_keeps_its_memo() {
         c.resolve(&s(&env, "alice")),
         Resolution {
             address: deposit,
-            memo
+            memo,
+            memo_type: MemoType::Inferred,
         }
     );
 }

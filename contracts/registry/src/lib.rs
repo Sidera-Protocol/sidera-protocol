@@ -54,8 +54,8 @@ extern crate std;
 
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error,
-    token::TokenClient, Address, BytesN, Env, IntoVal, Map, MuxedAddress, String, TryFromVal, Val,
-    Vec,
+    symbol_short, token::TokenClient, Address, BytesN, Env, IntoVal, Map, MuxedAddress, String,
+    Symbol, TryFromVal, Val, Vec,
 };
 
 /// Copying short strings into fixed buffers, without an allocator.
@@ -139,6 +139,46 @@ pub struct Resolution {
     pub address: MuxedAddress,
     /// Optional memo the destination requires (numeric ID or text).
     pub memo: Option<String>,
+    /// How the memo must be sent. [`MemoType::Inferred`] unless the owner
+    /// stated it with `set_memo_type`. Records written before memo types
+    /// existed read back as `Inferred`.
+    pub memo_type: MemoType,
+}
+
+/// The Stellar memo type a destination requires.
+#[contracttype]
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MemoType {
+    /// Not stated by the owner: wallets send digits that fit a u64 (no
+    /// leading zero) as `MEMO_ID` and anything else as `MEMO_TEXT`.
+    Inferred,
+    /// `MEMO_ID`: the memo is a u64, written in decimal.
+    Id,
+    /// `MEMO_TEXT`: the memo is sent as text, byte for byte, even if it is
+    /// all digits.
+    Text,
+}
+
+impl Resolution {
+    /// Decode a stored record, whichever shape it was written in. A record
+    /// written before memo types existed has no `memo_type` key, so decoding
+    /// it as a `Resolution` would trap; read its fields one by one instead.
+    fn from_stored(env: &Env, stored: Val) -> Self {
+        let fields: Map<Symbol, Val> = Map::try_from_val(env, &stored)
+            .unwrap_or_else(|_| panic_with_error!(env, RegistryError::NotFound));
+        let field = |key: Symbol| fields.get(key).unwrap_or_else(|| ().into_val(env));
+        Resolution {
+            address: MuxedAddress::try_from_val(env, &field(symbol_short!("address")))
+                .unwrap_or_else(|_| panic_with_error!(env, RegistryError::NotFound)),
+            memo: Option::<String>::try_from_val(env, &field(symbol_short!("memo")))
+                .unwrap_or_else(|_| panic_with_error!(env, RegistryError::NotFound)),
+            memo_type: match fields.get(symbol_short!("memo_type")) {
+                None => MemoType::Inferred,
+                Some(v) => MemoType::try_from_val(env, &v)
+                    .unwrap_or_else(|_| panic_with_error!(env, RegistryError::NotFound)),
+            },
+        }
+    }
 }
 
 /// Emitted when a name is registered. Topics: `("registered", name)`;
@@ -295,6 +335,21 @@ pub struct SubnameSet {
     pub caller: Address,
     /// The new payment record, or `None` if the subname was deleted.
     pub record: Option<Resolution>,
+}
+
+/// Emitted when a name's memo type is stated or cleared. Topics:
+/// `("memo_type_set", name)`; data (in order): `caller`, `memo_type`. (For a
+/// subname, `subname_set` is emitted with the updated record instead.)
+#[contractevent(topics = ["memo_type_set"], data_format = "vec")]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct MemoTypeSet {
+    /// The name whose memo type changed.
+    #[topic]
+    pub name: String,
+    /// The owner that made the change.
+    pub caller: Address,
+    /// The new memo type (`Inferred` when cleared).
+    pub memo_type: MemoType,
 }
 
 /// Emitted when a profile record changes. Topics: `("record_set", name)`;
@@ -500,7 +555,11 @@ impl SideraRegistry {
         let epoch = Self::epoch(&env, &name)
             .checked_add(1)
             .ok_or(RegistryError::ArithmeticOverflow)?;
-        let record = Resolution { address, memo };
+        let record = Resolution {
+            address,
+            memo,
+            memo_type: MemoType::Inferred,
+        };
         let storage = env.storage().persistent();
         storage.set(&DataKey::Name(name.clone()), &record);
         storage.set(&DataKey::Owner(name.clone()), &owner);
@@ -660,11 +719,7 @@ impl SideraRegistry {
             return Ok(found);
         }
         Self::require_active(&env, &name)?;
-        let record: Resolution = env
-            .storage()
-            .persistent()
-            .get(&DataKey::Name(name.clone()))
-            .ok_or(RegistryError::NotFound)?;
+        let record = Self::name_record(&env, &name).ok_or(RegistryError::NotFound)?;
         Self::touch_name(&env, &name);
         Ok(record)
     }
@@ -690,7 +745,15 @@ impl SideraRegistry {
         Self::require_active(&env, &name)?;
         Self::require_owner(&env, &name, &caller)?;
 
-        let record = Resolution { address, memo };
+        // A stated memo type belongs to the memo it was stated for.
+        let memo_type = Self::name_record(&env, &name)
+            .filter(|old| old.memo == memo)
+            .map_or(MemoType::Inferred, |old| old.memo_type);
+        let record = Resolution {
+            address,
+            memo,
+            memo_type,
+        };
         AddressSet {
             name: name.clone(),
             caller,
@@ -920,7 +983,15 @@ impl SideraRegistry {
         if !subs.contains_key(label.clone()) && subs.len() >= MAX_SUBNAMES {
             return Err(RegistryError::TooManyNames);
         }
-        let record = Resolution { address, memo };
+        let memo_type = subs
+            .get(label.clone())
+            .filter(|old| old.memo == memo)
+            .map_or(MemoType::Inferred, |old| old.memo_type);
+        let record = Resolution {
+            address,
+            memo,
+            memo_type,
+        };
         subs.set(label.clone(), record.clone());
         Self::save_map(&env, &Self::subnames_key(&env, &parent), &subs);
 
@@ -974,6 +1045,73 @@ impl SideraRegistry {
         } else {
             Map::new(&env)
         }
+    }
+
+    /// State how the memo of `name` (or of the subname `label.parent`) must be
+    /// sent: [`MemoType::Id`], [`MemoType::Text`], or [`MemoType::Inferred`]
+    /// to go back to the wallets' default rule. Only the owner of the active name (for a
+    /// subname, of its parent) may. Changing the memo later with
+    /// `set_address` or `set_subname` clears the stated type.
+    ///
+    /// This is how an exchange that needs a numeric memo as `MEMO_TEXT` says
+    /// so: without it, wallets send digits that fit a u64 as `MEMO_ID`.
+    ///
+    /// # Errors
+    ///
+    /// * [`RegistryError::NotFound`] — no such name or subname.
+    /// * [`RegistryError::NameExpired`] — the name (or parent) has expired.
+    /// * [`RegistryError::Unauthorized`] — `caller` is not the owner.
+    /// * [`RegistryError::InvalidMemo`] — there is no memo to type, or
+    ///   `MemoType::Id` was given for a memo that is not a u64 in decimal.
+    pub fn set_memo_type(
+        env: Env,
+        name: String,
+        caller: Address,
+        memo_type: MemoType,
+    ) -> Result<(), RegistryError> {
+        caller.require_auth();
+        let check = |record: &Resolution| match (&record.memo, memo_type) {
+            (_, MemoType::Inferred) => Ok(()),
+            (None, _) => Err(RegistryError::InvalidMemo),
+            (Some(m), MemoType::Id) if !Self::is_u64(m) => Err(RegistryError::InvalidMemo),
+            (Some(_), _) => Ok(()),
+        };
+
+        if let Some((label, parent)) = Self::split(&env, &name) {
+            Self::require_active(&env, &parent)?;
+            Self::require_owner(&env, &parent, &caller)?;
+            let mut subs = Self::subname_map(&env, &parent);
+            let mut record = subs.get(label.clone()).ok_or(RegistryError::NotFound)?;
+            check(&record)?;
+            record.memo_type = memo_type;
+            subs.set(label.clone(), record.clone());
+            Self::save_map(&env, &Self::subnames_key(&env, &parent), &subs);
+            SubnameSet {
+                parent,
+                label,
+                caller,
+                record: Some(record),
+            }
+            .publish(&env);
+            return Ok(());
+        }
+
+        Self::require_active(&env, &name)?;
+        Self::require_owner(&env, &name, &caller)?;
+        let mut record = Self::name_record(&env, &name).ok_or(RegistryError::NotFound)?;
+        check(&record)?;
+        record.memo_type = memo_type;
+        env.storage()
+            .persistent()
+            .set(&DataKey::Name(name.clone()), &record);
+        Self::touch_name(&env, &name);
+        MemoTypeSet {
+            name,
+            caller,
+            memo_type,
+        }
+        .publish(&env);
+        Ok(())
     }
 
     /// Set the profile record `key` of `name` (for example `avatar`, `url`,
@@ -1066,7 +1204,44 @@ impl SideraRegistry {
 
     /// `name`'s subnames for its current registration (empty if none).
     fn subname_map(env: &Env, name: &String) -> Map<String, Resolution> {
-        Self::load_map(env, &Self::subnames_key(env, name))
+        let stored: Map<String, Val> = Self::load_map(env, &Self::subnames_key(env, name));
+        let mut subs = Map::new(env);
+        for (label, record) in stored.iter() {
+            subs.set(label, Resolution::from_stored(env, record));
+        }
+        subs
+    }
+
+    /// `name`'s own payment record, decoded whichever shape it was stored in.
+    fn name_record(env: &Env, name: &String) -> Option<Resolution> {
+        env.storage()
+            .persistent()
+            .get::<DataKey, Val>(&DataKey::Name(name.clone()))
+            .map(|stored| Resolution::from_stored(env, stored))
+    }
+
+    /// Whether `memo` is a u64 written in canonical decimal: 1–20 digits, no
+    /// leading zero (except `0` itself), at most `u64::MAX`.
+    fn is_u64(memo: &String) -> bool {
+        let buf = Self::bytes(memo);
+        let b = buf.as_slice();
+        if b.is_empty() || b.len() > 20 || (b.len() > 1 && b[0] == b'0') {
+            return false;
+        }
+        let mut value: u64 = 0;
+        for c in b {
+            if !c.is_ascii_digit() {
+                return false;
+            }
+            value = match value
+                .checked_mul(10)
+                .and_then(|v| v.checked_add(u64::from(c - b'0')))
+            {
+                Some(v) => v,
+                None => return false,
+            };
+        }
+        true
     }
 
     fn subnames_key(env: &Env, name: &String) -> DataKey {
@@ -1170,7 +1345,7 @@ impl SideraRegistry {
     fn points_to(env: &Env, name: &String, address: &Address) -> bool {
         let storage = env.storage().persistent();
         let owner: Option<Address> = storage.get(&DataKey::Owner(name.clone()));
-        let record: Option<Resolution> = storage.get(&DataKey::Name(name.clone()));
+        let record = Self::name_record(env, name);
         owner.as_ref() == Some(address)
             && record.is_some_and(|r| r.address.id().is_none() && &r.address.address() == address)
     }
@@ -1367,3 +1542,6 @@ mod subname_tests;
 
 #[cfg(test)]
 mod muxed_tests;
+
+#[cfg(test)]
+mod memo_type_tests;

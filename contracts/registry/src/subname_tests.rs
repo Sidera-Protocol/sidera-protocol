@@ -36,7 +36,8 @@ fn a_subname_resolves_to_its_own_address_and_memo() {
         r,
         Resolution {
             address: exchange.clone().into(),
-            memo: memo.clone()
+            memo: memo.clone(),
+            memo_type: MemoType::Inferred,
         }
     );
     // The parent still resolves to its own record.

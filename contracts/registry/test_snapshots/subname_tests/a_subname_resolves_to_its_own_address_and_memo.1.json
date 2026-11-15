@@ -228,6 +228,18 @@
                       "symbol": "memo"
                     },
                     "val": "void"
+                  },
+                  {
+                    "key": {
+                      "symbol": "memo_type"
+                    },
+                    "val": {
+                      "vec": [
+                        {
+                          "symbol": "Inferred"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
@@ -338,6 +350,18 @@
                           },
                           "val": {
                             "string": "48151623"
+                          }
+                        },
+                        {
+                          "key": {
+                            "symbol": "memo_type"
+                          },
+                          "val": {
+                            "vec": [
+                              {
+                                "symbol": "Inferred"
+                              }
+                            ]
                           }
                         }
                       ]

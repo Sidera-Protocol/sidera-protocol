@@ -199,6 +199,18 @@
                     "val": {
                       "string": "ref-42"
                     }
+                  },
+                  {
+                    "key": {
+                      "symbol": "memo_type"
+                    },
+                    "val": {
+                      "vec": [
+                        {
+                          "symbol": "Inferred"
+                        }
+                      ]
+                    }
                   }
                 ]
               }

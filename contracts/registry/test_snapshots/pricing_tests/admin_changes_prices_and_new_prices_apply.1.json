@@ -323,6 +323,18 @@
                       "symbol": "memo"
                     },
                     "val": "void"
+                  },
+                  {
+                    "key": {
+                      "symbol": "memo_type"
+                    },
+                    "val": {
+                      "vec": [
+                        {
+                          "symbol": "Inferred"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
