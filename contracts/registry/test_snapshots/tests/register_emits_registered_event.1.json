@@ -198,6 +198,18 @@
                     "val": {
                       "string": "404"
                     }
+                  },
+                  {
+                    "key": {
+                      "symbol": "memo_type"
+                    },
+                    "val": {
+                      "vec": [
+                        {
+                          "symbol": "Inferred"
+                        }
+                      ]
+                    }
                   }
                 ]
               }
