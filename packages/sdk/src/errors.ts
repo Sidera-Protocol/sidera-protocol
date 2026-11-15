@@ -69,7 +69,7 @@ export function errorFromCode(code: number, name: string): SideraError {
     case 10:
       return new SideraError("TooManyNames", "This owner already holds the maximum of 100 names");
     case 11:
-      return new SideraError("InvalidMemo", "A memo must be 1 to 28 bytes, the size of a Stellar text memo");
+      return new SideraError("InvalidMemo", "Invalid memo: a memo must be 1 to 28 bytes (a Stellar text memo), and MEMO_ID needs a memo that is a u64 in decimal");
     case 12:
       return new SideraError(
         "InvalidRecord",
