@@ -8,6 +8,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Fixed
+- **Muxed (M-) addresses:** `register`, `set_address` and `set_subname`
+  failed on-chain with `Error(WasmVm, InvalidAction)` for an M-address,
+  because the payee was a plain `Address`, which can't hold one. The payee is
+  now a `MuxedAddress`: an M-address resolves exactly as set, id included.
+  Existing records and clients that pass G- or C-addresses are unaffected.
+  A name that resolves to a muxed address can't be its base account's
+  primary name.
+  Shipped to the testnet contract with `upgrade` (WASM `70cf31415ae7…`);
+  `scripts/muxed-demo.mjs` proves the round trip live
+  ([receipt](docs/muxed-receipt.json)).
 - **SDK install:** the SDK is attached to a GitHub release
   (`sdk-v0.1.0`) and the docs install it by URL; it is not on the npm
   registry yet.

@@ -3,6 +3,7 @@
 use super::*;
 use crate::testutil::{deploy, free};
 use soroban_sdk::testutils::{Address as _, Ledger};
+use soroban_sdk::MuxedAddress;
 
 fn s(env: &Env, raw: &str) -> String {
     String::from_str(env, raw)
@@ -34,16 +35,22 @@ fn a_subname_resolves_to_its_own_address_and_memo() {
     assert_eq!(
         r,
         Resolution {
-            address: exchange.clone(),
+            address: exchange.clone().into(),
             memo: memo.clone()
         }
     );
     // The parent still resolves to its own record.
-    assert_eq!(c.resolve(&s(&env, "alice")).address, alice);
+    assert_eq!(
+        c.resolve(&s(&env, "alice")).address,
+        MuxedAddress::from(&alice)
+    );
     // Listed by label.
     let subs = c.subnames(&s(&env, "alice"));
     assert_eq!(subs.len(), 1);
-    assert_eq!(subs.get(s(&env, "pay")).unwrap().address, exchange);
+    assert_eq!(
+        subs.get(s(&env, "pay")).unwrap().address,
+        MuxedAddress::from(&exchange)
+    );
 }
 
 #[test]
@@ -52,7 +59,10 @@ fn a_subname_can_be_updated_and_removed() {
     let (a, b) = (Address::generate(&env), Address::generate(&env));
     c.set_subname(&s(&env, "alice"), &s(&env, "pay"), &alice, &a, &None);
     c.set_subname(&s(&env, "alice"), &s(&env, "pay"), &alice, &b, &None);
-    assert_eq!(c.resolve(&s(&env, "pay.alice")).address, b);
+    assert_eq!(
+        c.resolve(&s(&env, "pay.alice")).address,
+        MuxedAddress::from(&b)
+    );
     assert_eq!(c.subnames(&s(&env, "alice")).len(), 1);
 
     c.remove_subname(&s(&env, "alice"), &s(&env, "pay"), &alice);
@@ -169,7 +179,10 @@ fn subnames_stop_with_the_parent_and_come_back_on_renewal() {
 
     // Renewed during the grace period: same registration, subnames are back.
     c.renew(&s(&env, "alice"), &alice, &1);
-    assert_eq!(c.resolve(&s(&env, "pay.alice")).address, alice);
+    assert_eq!(
+        c.resolve(&s(&env, "pay.alice")).address,
+        MuxedAddress::from(&alice)
+    );
 }
 
 #[test]
@@ -195,7 +208,10 @@ fn a_new_registrant_does_not_inherit_subnames_or_records() {
 
     // Bob starts fresh and can use the same labels.
     c.set_subname(&s(&env, "alice"), &s(&env, "pay"), &bob, &bob, &None);
-    assert_eq!(c.resolve(&s(&env, "pay.alice")).address, bob);
+    assert_eq!(
+        c.resolve(&s(&env, "pay.alice")).address,
+        MuxedAddress::from(&bob)
+    );
 }
 
 #[test]
@@ -205,7 +221,10 @@ fn a_transfer_hands_subnames_to_the_new_owner() {
     let bob = Address::generate(&env);
     c.transfer(&s(&env, "alice"), &alice, &bob);
     // Existing subnames keep resolving; only the new owner manages them.
-    assert_eq!(c.resolve(&s(&env, "pay.alice")).address, alice);
+    assert_eq!(
+        c.resolve(&s(&env, "pay.alice")).address,
+        MuxedAddress::from(&alice)
+    );
     assert_eq!(
         c.try_remove_subname(&s(&env, "alice"), &s(&env, "pay"), &alice),
         Err(Ok(RegistryError::Unauthorized))
@@ -343,7 +362,10 @@ fn names_registered_before_the_upgrade_work_with_subnames() {
         &s(&env, "url"),
         &Some(s(&env, "x")),
     );
-    assert_eq!(c.resolve(&s(&env, "pay.alice")).address, alice);
+    assert_eq!(
+        c.resolve(&s(&env, "pay.alice")).address,
+        MuxedAddress::from(&alice)
+    );
 
     env.ledger()
         .with_mut(|l| l.timestamp += 2 * YEAR_SECONDS + GRACE_PERIOD_SECONDS + 1);

@@ -1,0 +1,45 @@
+{
+  "network": "testnet",
+  "contractId": "CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT",
+  "sdk": "@sidera-protocol/sdk (packages/sdk)",
+  "steps": [
+    {
+      "what": "exchange registers a name paying a customer's muxed address",
+      "name": "muxed-demo.sid",
+      "address": "MAX5F6KRYEIEPDZ3CIYFTIU5WQEI7D3TLIIWPPTVEL2ME3SAVE2ROAAAAAAPZXSBWJ6EA",
+      "hash": "c676e6c1a18942c34ac81b4057e2c2bfcb92da9f9a88ec57dccf39d3dd4176ba"
+    },
+    {
+      "what": "resolve returns the exact M-address",
+      "resolved": "MAX5F6KRYEIEPDZ3CIYFTIU5WQEI7D3TLIIWPPTVEL2ME3SAVE2ROAAAAAAPZXSBWJ6EA",
+      "ok": true
+    },
+    {
+      "what": "Bob pays 1 XLM to the name; Horizon shows it reached the muxed id",
+      "hash": "1230a468cd136578b1d8f644af16f418e9497b683cfbde714168dfc4d20758f4",
+      "to": "GAX5F6KRYEIEPDZ3CIYFTIU5WQEI7D3TLIIWPPTVEL2ME3SAVE2RPL24",
+      "to_muxed": "MAX5F6KRYEIEPDZ3CIYFTIU5WQEI7D3TLIIWPPTVEL2ME3SAVE2ROAAAAAAPZXSBWJ6EA",
+      "to_muxed_id": "4242424242",
+      "amount": "1.0000000",
+      "ok": true
+    },
+    {
+      "what": "set_address to another customer's id resolves exactly",
+      "hash": "6eebcbce7c41fdcb22f5a7e45e9e61ba771e492a3041136b5903f0515576cee9",
+      "resolved": "MAX5F6KRYEIEPDZ3CIYFTIU5WQEI7D3TLIIWPPTVEL2ME3SAVE2ROAAAAAAPZXSBWNOVA",
+      "ok": true
+    },
+    {
+      "what": "a muxed subname resolves exactly",
+      "name": "muxed.demo-exchange.sid",
+      "hash": "9f3ac6c18d3626ac5cc0da4750088131ac4e503b843c0bcdff2345f43a57950e",
+      "resolved": "MAX5F6KRYEIEPDZ3CIYFTIU5WQEI7D3TLIIWPPTVEL2ME3SAVE2ROAAAAAAPZXSBWS5CA",
+      "ok": true
+    },
+    {
+      "what": "the base account can't claim a name paying its muxed address as primary name",
+      "refusedWith": "Unauthorized",
+      "ok": true
+    }
+  ]
+}
