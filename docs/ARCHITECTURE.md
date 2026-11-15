@@ -7,7 +7,7 @@ boundary: `contracts/registry`, `packages/sdk` and `apps/dashboard`.
 Stellar wallet / user
         │ signs registry transactions
         ▼
-sidera-app ───────► sidera-sdk ───────► Soroban registry contract
+apps/dashboard ───► packages/sdk ─────► contracts/registry (Soroban)
   dashboard          reads, writes,       names, owners, addresses,
   and wallet UI      validation, memos     and optional memo hints
 ```
@@ -39,7 +39,7 @@ writes and uses Freighter for wallet signing. The application may provide
 convenient loading, error, and demo states, but it must display the network and
 contract configuration clearly and must not imply that demo data is on-chain.
 
-## Cross-repository change checklist
+## Interface change checklist
 
 When changing the registry interface:
 
@@ -48,7 +48,8 @@ When changing the registry interface:
 3. Update the dashboard flow and user-facing states.
 4. Update deployment identifiers and documentation if the deployed interface
    changes.
-5. Run the relevant checks in each repository and document the network used.
+5. Run `bash scripts/verify-suite.sh` and document the network used. One pull
+   request carries all of these changes, so the three parts never disagree.
 
 ## Network and deployment boundary
 

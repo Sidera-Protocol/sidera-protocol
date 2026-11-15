@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
-# Run the checks required before a coordinated Sidera release.
+# Run every check required before a Sidera release: the registry contract,
+# the SDK and the dashboard, all from this repository.
 #
-# Contract-only:
+#   npm ci                       # once, to install the SDK and dashboard
 #   bash scripts/verify-suite.sh
-#
-# Full local suite:
-#   SDK_DIR=../sidera-sdk APP_DIR=../sidera-app bash scripts/verify-suite.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SDK_DIR="${SDK_DIR:-}"
-APP_DIR="${APP_DIR:-}"
 
 fail() {
   echo "ERROR: $*" >&2
@@ -22,13 +18,13 @@ run_step() {
   echo "== $* =="
 }
 
-require_dir() {
-  [ -d "$1" ] || fail "directory does not exist: $1"
-}
-
 require_command() {
   command -v "$1" >/dev/null 2>&1 || fail "$1 is required"
 }
+
+require_command cargo
+require_command npm
+[ -d "$ROOT/node_modules" ] || fail "run 'npm ci' in $ROOT first"
 
 run_step "Contract formatting"
 (cd "$ROOT" && cargo fmt --all -- --check)
@@ -42,31 +38,20 @@ run_step "Contract tests"
 run_step "Contract documentation"
 (cd "$ROOT" && RUSTDOCFLAGS=-Dwarnings cargo doc --workspace --no-deps --locked --document-private-items)
 
-if [ -n "$SDK_DIR" ]; then
-  require_dir "$SDK_DIR"
-  require_command npm
-  run_step "SDK typecheck"
-  (cd "$SDK_DIR" && npm run lint)
-  run_step "SDK tests"
-  (cd "$SDK_DIR" && npm test)
-  run_step "SDK build"
-  (cd "$SDK_DIR" && npm run build)
-else
-  echo
-  echo "SDK checks skipped: set SDK_DIR to the sidera-sdk checkout"
-fi
+run_step "Contract release build"
+(cd "$ROOT" && cargo build --locked --release --target wasm32v1-none -p sidera-registry)
 
-if [ -n "$APP_DIR" ]; then
-  require_dir "$APP_DIR"
-  require_command npm
-  run_step "Dashboard typecheck"
-  (cd "$APP_DIR" && npm run lint)
-  run_step "Dashboard build"
-  (cd "$APP_DIR" && npm run build)
-else
-  echo
-  echo "Dashboard checks skipped: set APP_DIR to the sidera-app checkout"
-fi
+run_step "SDK typecheck"
+(cd "$ROOT" && npm run lint -w @sidera-protocol/sdk)
+run_step "SDK tests"
+(cd "$ROOT" && npm test -w @sidera-protocol/sdk)
+run_step "SDK build"
+(cd "$ROOT" && npm run build -w @sidera-protocol/sdk)
+
+run_step "Dashboard typecheck"
+(cd "$ROOT" && npm run lint -w @sidera-protocol/app)
+run_step "Dashboard build"
+(cd "$ROOT" && npm run build -w @sidera-protocol/app)
 
 echo
 echo "Sidera verification suite passed."

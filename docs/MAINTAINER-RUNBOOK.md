@@ -17,7 +17,7 @@ issue, release, or deployment record.
 ### Before a release
 
 1. Confirm the contract, SDK, and dashboard changes are compatible.
-2. Run `bash scripts/verify-suite.sh` with the local SDK and app paths.
+2. Run `bash scripts/verify-suite.sh` (after `npm ci`).
 3. Run the testnet smoke flow using caller-provided identities.
 4. Record the contract ID, network, WASM hash, transaction links, and tool
    versions.

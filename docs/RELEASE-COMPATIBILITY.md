@@ -42,9 +42,7 @@ Never silently reuse a deployed contract ID for an incompatible interface.
 
 Before tagging a release:
 
-- [ ] `bash scripts/verify-suite.sh` passes
-- [ ] Full suite passes with `SDK_DIR` and `APP_DIR` set to the sibling
-      checkouts
+- [ ] `bash scripts/verify-suite.sh` passes (contract, SDK and dashboard)
 - [ ] `cargo fmt --all -- --check`
 - [ ] `cargo clippy --workspace --all-targets --locked -- -D warnings`
 - [ ] `cargo test --workspace --all-targets --locked`
@@ -56,7 +54,8 @@ Before tagging a release:
 - [ ] dashboard typecheck and build pass with the SDK version being released
 - [ ] README, resolver interface, integration guide, changelog, and known
       limitations agree about the implemented feature set
-- [ ] deployment network and contract ID are recorded in all three repos
+- [ ] deployment network and contract ID are recorded in the README, the SDK
+      README and the dashboard configuration
 - [ ] security-sensitive changes have a maintainer review
 
 ## Version alignment

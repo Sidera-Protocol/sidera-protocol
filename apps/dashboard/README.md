@@ -5,7 +5,7 @@ and claim `.sid` names.**
 
 See the [Sidera documentation hub](../../docs/README.md)
 for the repository map, current testnet deployment, integration flow, and
-cross-repository contribution guidance. See the
+contribution guidance. See the
 [troubleshooting guide](docs/TROUBLESHOOTING.md) for configuration, wallet,
 network, and memo-hint issues.
 
@@ -51,11 +51,11 @@ SDK before the dashboard.
 
 ## Suite
 
-| Repo | Layer |
+| Part | Layer |
 |---|---|
 | [`contracts/registry`](../../contracts/registry) | Soroban registry (deployed on testnet) |
 | [`packages/sdk`](../../packages/sdk) | TypeScript client |
-| **sidera-app** | This dashboard |
+| **`apps/dashboard`** | This dashboard |
 
 ## License
 

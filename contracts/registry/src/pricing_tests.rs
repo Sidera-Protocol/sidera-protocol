@@ -442,3 +442,36 @@ fn admin_handover_with_both_signatures() {
     c.set_admin(&new_admin);
     assert_eq!(c.config().admin, new_admin);
 }
+
+/// After a handover the previous admin holds no power: its signature alone
+/// can no longer change prices, while the new admin's can.
+#[test]
+fn the_previous_admin_has_no_power_after_a_handover() {
+    let (env, d) = setup();
+    let c = client(&env, &d);
+    let new_admin = Address::generate(&env);
+    c.set_admin(&new_admin);
+
+    let invoke = MockAuthInvoke {
+        contract: &d.id,
+        fn_name: "set_prices",
+        args: (crate::testutil::free(),).into_val(&env),
+        sub_invokes: &[],
+    };
+    let old = MockAuth {
+        address: &d.admin,
+        invoke: &invoke,
+    };
+    assert!(c
+        .mock_auths(&[old])
+        .try_set_prices(&crate::testutil::free())
+        .is_err());
+    assert_eq!(c.config().prices, prices());
+
+    let new = MockAuth {
+        address: &new_admin,
+        invoke: &invoke,
+    };
+    c.mock_auths(&[new]).set_prices(&crate::testutil::free());
+    assert_eq!(c.config().prices, crate::testutil::free());
+}

@@ -11,12 +11,12 @@ What user, developer, maintainer, or ecosystem problem does this task solve?
 
 ## Outcome
 
-Describe one concrete result. Keep this issue focused on one repository or one
-coordinated cross-repository change.
+Describe one concrete result. Keep this issue focused on one part (contract,
+SDK or dashboard), or on one interface change that spans them.
 
 ## Scope
 
-- Repository or repositories:
+- Part or parts (`contracts/registry`, `packages/sdk`, `apps/dashboard`):
 - Likely files or surfaces:
 - Dependencies:
 - Compatibility or security risks:

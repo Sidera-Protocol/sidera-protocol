@@ -64,5 +64,5 @@ README and [security policy](../SECURITY.md).
 
 Planned issues may cover resolver and memo safety, indexer support, wallet integration, dashboard workflows, testing,
 security review, documentation, and developer tooling.
-Cross-repository changes should explain which contract, SDK, and application
-surfaces need to stay compatible.
+A change that touches the contract interface should update the SDK and the
+dashboard in the same pull request, and say which surfaces it changed.
