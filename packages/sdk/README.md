@@ -20,11 +20,17 @@ for the exported client methods, types, and errors.
 
 ## Installation
 
+> **Not on the npm registry yet.** `npm install @sidera-protocol/sdk`
+> returns a 404. Install the release package from GitHub by URL:
+
 ```bash
-npm   install @sidera-protocol/sdk
-pnpm  add    @sidera-protocol/sdk
-yarn  add    @sidera-protocol/sdk
+npm install https://github.com/Sidera-Protocol/sidera-protocol/releases/download/sdk-v0.1.0/sidera-protocol-sdk-0.1.0.tgz
 ```
+
+Inside this repository the dashboard uses the SDK through npm workspaces, so
+no install step is needed there. See
+[Integrating Sidera](../../docs/INTEGRATION.md#installing-the-sdk-in-your-own-project)
+for a full example.
 
 ## Initialization
 

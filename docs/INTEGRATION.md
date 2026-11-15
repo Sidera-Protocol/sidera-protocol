@@ -31,9 +31,12 @@ in the [README](../README.md#testnet-deployment-proof).
 ## Calling `resolve`
 
 `resolve` is a read-only invocation, so it costs no fee and can be simulated
-against any Soroban RPC endpoint. With `@stellar/stellar-sdk` (v13+), the
-generated contract client loads the deployed contract's spec and exposes the
-entrypoints directly:
+against any Soroban RPC endpoint. With `@stellar/stellar-sdk` (v14),
+`contract.Client.from` fetches the deployed contract's spec and exposes the
+entrypoints directly. (`new contract.Client(...)` needs the spec as its first
+argument, so don't call it with options alone.) `resolve` returns a Soroban
+`Result`: `unwrap()` gives the record, or throws for an unknown or expired
+name.
 
 ```typescript
 import { contract } from "@stellar/stellar-sdk";
@@ -42,12 +45,11 @@ const REGISTRY_ID = "CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT";
 const RPC_URL = "https://soroban-testnet.stellar.org";
 const TESTNET_PASSPHRASE = "Test SDF Network ; September 2015";
 
-const registry = new contract.Client({
+// Read-only calls need no signer.
+const registry = await contract.Client.from({
   contractId: REGISTRY_ID,
   rpcUrl: RPC_URL,
   networkPassphrase: TESTNET_PASSPHRASE,
-  // Read-only calls need no signer.
-  publicKey: undefined,
 });
 
 export async function resolveSid(name: string): Promise<{
@@ -55,9 +57,10 @@ export async function resolveSid(name: string): Promise<{
   memo: string | null;
 }> {
   const { result } = await registry.resolve({ name });
+  const record = result.unwrap(); // throws for an unknown or expired name
   return {
-    address: result.address.toString(),
-    memo: result.memo ?? null,
+    address: record.address.toString(),
+    memo: record.memo ?? null,
   };
 }
 ```
@@ -69,6 +72,36 @@ stellar contract invoke \
   --id CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT \
   --network testnet --source <any-identity> --send no \
   -- resolve --name alice-pay
+```
+
+## Installing the SDK in your own project
+
+`@sidera-protocol/sdk` is not on the npm registry yet, so `npm install
+@sidera-protocol/sdk` fails with a 404. Each SDK release is attached to a
+[GitHub release](https://github.com/Sidera-Protocol/sidera-protocol/releases)
+instead; install it by URL:
+
+```bash
+npm install https://github.com/Sidera-Protocol/sidera-protocol/releases/download/sdk-v0.1.0/sidera-protocol-sdk-0.1.0.tgz
+```
+
+npm records the URL in your `package.json`, and installs
+`@stellar/stellar-sdk` with it. To build the package yourself instead, run
+`npm ci && npm run build -w @sidera-protocol/sdk` in this repository, then
+`npm pack` in `packages/sdk`, and install the `.tgz` it writes.
+
+Your app then imports it as usual (the package is ES modules only):
+
+```typescript
+import { SideraClient } from "@sidera-protocol/sdk";
+
+const sidera = new SideraClient({
+  contractId: "CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT",
+  network: "testnet",
+});
+console.log(await sidera.resolve("alice-pay"));
+// { name: "alice-pay", fullName: "alice-pay.sid", address: "GCSR…6MMO",
+//   memo: { type: "id", value: "1029384756" } }
 ```
 
 ## Paying a name
@@ -105,7 +138,12 @@ same with Freighter.
 (the SDK strips `.sid`). The rules above apply unchanged; in particular,
 attach the subname's own memo, not the parent's. An exchange can give every
 customer a name such as `alice.exchange.sid` whose memo is that customer's
-deposit number.
+deposit number, **provided the exchange accepts that number as a `MEMO_ID`**.
+The registry stores memos as text and wallets send a plain number as
+`MEMO_ID`; an exchange that needs a numeric deposit memo as `MEMO_TEXT` can't
+be served yet (see [Known limitations](KNOWN-LIMITATIONS.md)). The dashboard
+shows which type a memo will go out as and asks the owner to confirm numeric
+ones.
 
 ## Watching for changes
 
