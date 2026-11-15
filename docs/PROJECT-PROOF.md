@@ -10,8 +10,9 @@ verified primary names, owner name lists and admin upgrades.
 - Network: Stellar testnet
 - Contract: `CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT`
 - Explorer: <https://lab.stellar.org/r/testnet/contract/CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT>
-- WASM SHA-256 (deployed, optimized): `42f55fba36cbcb871c90981e83e27c505965f06f9ad32a6b275f112ff00f524a`
-  (upgraded 2026-11-13 for subnames and profile records; earlier the same
+- WASM SHA-256 (deployed, optimized): `70cf31415ae7da686c765c30fda1c24646a4f6c5ce9866a53e963a7b084d301d`
+  (upgraded 2026-11-15 for muxed addresses; before that
+  `42f55fba36cb…`, upgraded 2026-11-13 for subnames and profile records; earlier the same
   day `a80a047aa9e7…` to refuse memos that cannot be sent; before that
   `f073550659c2aa14e226965422bf53716b98991eaeea5ee280edb9f5b0fb47a6`)
 - Payment token: native XLM; 50 / 10 / 2 XLM per year for 3 / 4 / 5+ characters
