@@ -54,7 +54,8 @@ extern crate std;
 
 use soroban_sdk::{
     contract, contracterror, contractevent, contractimpl, contracttype, panic_with_error,
-    token::TokenClient, Address, BytesN, Env, IntoVal, Map, String, TryFromVal, Val, Vec,
+    token::TokenClient, Address, BytesN, Env, IntoVal, Map, MuxedAddress, String, TryFromVal, Val,
+    Vec,
 };
 
 /// Copying short strings into fixed buffers, without an allocator.
@@ -131,8 +132,11 @@ pub enum RegistryError {
 #[contracttype]
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Resolution {
-    /// The G- or M-address that receives the payment.
-    pub address: Address,
+    /// The G-, M- or C-address that receives the payment. A muxed (M-)
+    /// address keeps its id, so it resolves exactly as it was set. Records
+    /// written before muxed support hold a plain address, which reads back
+    /// unchanged.
+    pub address: MuxedAddress,
     /// Optional memo the destination requires (numeric ID or text).
     pub memo: Option<String>,
 }
@@ -148,7 +152,7 @@ pub struct Registered {
     /// The owning address.
     pub owner: Address,
     /// The initial payment destination.
-    pub address: Address,
+    pub address: MuxedAddress,
     /// The initial memo hint.
     pub memo: Option<String>,
     /// When the registration expires (ledger timestamp, seconds).
@@ -257,7 +261,7 @@ pub struct AddressSet {
     /// The owner that performed the update.
     pub caller: Address,
     /// The new payment destination.
-    pub address: Address,
+    pub address: MuxedAddress,
     /// The new memo hint.
     pub memo: Option<String>,
 }
@@ -457,7 +461,7 @@ impl SideraRegistry {
         env: Env,
         name: String,
         owner: Address,
-        address: Address,
+        address: MuxedAddress,
         memo: Option<String>,
         years: u32,
     ) -> Result<u64, RegistryError> {
@@ -678,7 +682,7 @@ impl SideraRegistry {
         env: Env,
         name: String,
         caller: Address,
-        address: Address,
+        address: MuxedAddress,
         memo: Option<String>,
     ) -> Result<(), RegistryError> {
         caller.require_auth();
@@ -903,7 +907,7 @@ impl SideraRegistry {
         parent: String,
         label: String,
         caller: Address,
-        address: Address,
+        address: MuxedAddress,
         memo: Option<String>,
     ) -> Result<(), RegistryError> {
         caller.require_auth();
@@ -1160,12 +1164,15 @@ impl SideraRegistry {
         Ok(())
     }
 
-    /// Whether `address` both owns `name` and is where `name` resolves.
+    /// Whether `address` both owns `name` and is where `name` resolves. A
+    /// name that resolves to a muxed address points to that virtual account,
+    /// not to its base account, so it never qualifies.
     fn points_to(env: &Env, name: &String, address: &Address) -> bool {
         let storage = env.storage().persistent();
         let owner: Option<Address> = storage.get(&DataKey::Owner(name.clone()));
         let record: Option<Resolution> = storage.get(&DataKey::Name(name.clone()));
-        owner.as_ref() == Some(address) && record.is_some_and(|r| &r.address == address)
+        owner.as_ref() == Some(address)
+            && record.is_some_and(|r| r.address.id().is_none() && &r.address.address() == address)
     }
 
     /// If `owner` currently holds `name` (active or grace), its expiry.
@@ -1357,3 +1364,6 @@ mod props;
 
 #[cfg(test)]
 mod subname_tests;
+
+#[cfg(test)]
+mod muxed_tests;

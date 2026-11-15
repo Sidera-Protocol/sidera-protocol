@@ -3,6 +3,7 @@
 use super::*;
 use crate::testutil::{deploy, Deployed};
 use soroban_sdk::testutils::{Address as _, Events, Ledger, MockAuth, MockAuthInvoke};
+use soroban_sdk::MuxedAddress;
 use soroban_sdk::{IntoVal, Symbol};
 
 /// 3 chars: 100, 4 chars: 20, 5+: 5 (per year).
@@ -148,7 +149,10 @@ fn registration_expires_after_the_paid_years() {
 
     // Still resolving on its last second.
     env.ledger().with_mut(|l| l.timestamp = expiry);
-    assert_eq!(c.resolve(&s(&env, "alice")).address, owner);
+    assert_eq!(
+        c.resolve(&s(&env, "alice")).address,
+        MuxedAddress::from(&owner)
+    );
 }
 
 #[test]
@@ -226,7 +230,10 @@ fn after_the_grace_period_anyone_can_register_the_name() {
 
     c.register(&s(&env, "alice"), &newcomer, &newcomer, &None, &1);
     assert_eq!(c.owner_of(&s(&env, "alice")), newcomer);
-    assert_eq!(c.resolve(&s(&env, "alice")).address, newcomer);
+    assert_eq!(
+        c.resolve(&s(&env, "alice")).address,
+        MuxedAddress::from(&newcomer)
+    );
     // The previous owner has no control left.
     assert_eq!(
         c.try_set_address(&s(&env, "alice"), &owner, &owner, &None)
@@ -278,7 +285,10 @@ fn renewing_in_the_grace_period_restores_the_name() {
     let renewed = c.renew(&s(&env, "alice"), &owner, &1);
     // Counted from the old expiry, so the gap is not free time.
     assert_eq!(renewed, first + YEAR_SECONDS);
-    assert_eq!(c.resolve(&s(&env, "alice")).address, owner);
+    assert_eq!(
+        c.resolve(&s(&env, "alice")).address,
+        MuxedAddress::from(&owner)
+    );
 }
 
 #[test]

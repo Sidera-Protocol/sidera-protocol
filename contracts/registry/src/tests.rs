@@ -2,6 +2,7 @@ use super::*;
 use soroban_sdk::testutils::{
     storage::Persistent as _, Address as _, Events, Ledger, MockAuth, MockAuthInvoke,
 };
+use soroban_sdk::MuxedAddress;
 use soroban_sdk::{IntoVal, Symbol};
 
 const TTL_EXTEND_TO_LEDGERS: u32 = 518_400;
@@ -32,7 +33,7 @@ fn register_and_resolve_roundtrip() {
     client.register(&s(&env, "alice"), &owner, &dest, &None, &1);
 
     let resolution = client.resolve(&s(&env, "alice"));
-    assert_eq!(resolution.address, dest);
+    assert_eq!(resolution.address, MuxedAddress::from(&dest));
     assert_eq!(resolution.memo, None);
     assert!(client.exists(&s(&env, "alice")));
     assert_eq!(client.total_names(), 1);
@@ -50,7 +51,7 @@ fn memo_hint_roundtrips() {
     client.register(&s(&env, "bob"), &owner, &dest, &Some(memo.clone()), &1);
 
     let resolution = client.resolve(&s(&env, "bob"));
-    assert_eq!(resolution.address, dest);
+    assert_eq!(resolution.address, MuxedAddress::from(&dest));
     assert_eq!(resolution.memo, Some(memo));
 }
 
@@ -133,7 +134,7 @@ fn set_address_requires_current_owner() {
     // The owner updates both address and memo.
     client.set_address(&s(&env, "erin"), &owner, &new_dest, &Some(memo.clone()));
     let resolution = client.resolve(&s(&env, "erin"));
-    assert_eq!(resolution.address, new_dest);
+    assert_eq!(resolution.address, MuxedAddress::from(&new_dest));
     assert_eq!(resolution.memo, Some(memo));
 }
 
@@ -213,7 +214,10 @@ fn hyphenated_names_are_valid() {
     let dest = Address::generate(&env);
 
     client.register(&s(&env, "alice-pay"), &owner, &dest, &None, &1);
-    assert_eq!(client.resolve(&s(&env, "alice-pay")).address, dest);
+    assert_eq!(
+        client.resolve(&s(&env, "alice-pay")).address,
+        MuxedAddress::from(&dest)
+    );
 }
 
 #[test]
@@ -233,7 +237,7 @@ fn resolve_extends_the_name_ttl() {
     });
     assert!(client.exists(&s(&env, "grace")));
     let resolution = client.resolve(&s(&env, "grace"));
-    assert_eq!(resolution.address, dest);
+    assert_eq!(resolution.address, MuxedAddress::from(&dest));
 
     // TTL was just extended by the resolve; time passes again and the name
     // is still alive — proving the hot-lookup bump, not the original
@@ -241,7 +245,10 @@ fn resolve_extends_the_name_ttl() {
     env.ledger().with_mut(|l| {
         l.sequence_number += (TTL_EXTEND_TO_LEDGERS - TTL_THRESHOLD_LEDGERS) - 1;
     });
-    assert_eq!(client.resolve(&s(&env, "grace")).address, dest);
+    assert_eq!(
+        client.resolve(&s(&env, "grace")).address,
+        MuxedAddress::from(&dest)
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -790,7 +797,11 @@ fn name_ttl_accounting_after_registration_with_no_activity() {
 
     // `resolve` still works and re-bumps the TTL to the 30-day window.
     let resolution = client.resolve(&s(&env, "moth"));
-    assert_eq!(resolution.address, dest, "resolve must still succeed");
+    assert_eq!(
+        resolution.address,
+        MuxedAddress::from(&dest),
+        "resolve must still succeed"
+    );
     env.as_contract(&id, || {
         assert_eq!(
             env.storage().persistent().get_ttl(&name_key),
@@ -828,7 +839,8 @@ fn resolve_inside_ttl_window_succeeds_and_resets_ttl() {
     // This resolve lands inside the TTL window; it must succeed and bump.
     let resolution = client.resolve(&s(&env, "nova"));
     assert_eq!(
-        resolution.address, dest,
+        resolution.address,
+        MuxedAddress::from(&dest),
         "resolve inside TTL window must return the correct address"
     );
 
@@ -872,7 +884,8 @@ fn resolve_at_exact_ttl_threshold_bumps_and_succeeds() {
 
     let resolution = client.resolve(&s(&env, "opal"));
     assert_eq!(
-        resolution.address, dest,
+        resolution.address,
+        MuxedAddress::from(&dest),
         "resolve at the exact TTL threshold must succeed"
     );
 
