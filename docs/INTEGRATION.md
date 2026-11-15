@@ -82,11 +82,15 @@ stellar contract invoke \
 instead; install it by URL:
 
 ```bash
+echo "allow-remote=root" >> .npmrc   # npm 12+ refuses package URLs without it
 npm install https://github.com/Sidera-Protocol/sidera-protocol/releases/download/sdk-v0.1.0/sidera-protocol-sdk-0.1.0.tgz
 ```
 
-npm records the URL in your `package.json`, and installs
-`@stellar/stellar-sdk` with it. To build the package yourself instead, run
+npm records the URL in your `package.json` and installs
+`@stellar/stellar-sdk` with it. Keep the `.npmrc` line in your project:
+npm 12 and later refuse dependencies given as a URL unless `allow-remote`
+allows them, so later installs of your project need it too. Older npm
+versions don't need the line. To build the package yourself instead, run
 `npm ci && npm run build -w @sidera-protocol/sdk` in this repository, then
 `npm pack` in `packages/sdk`, and install the `.tgz` it writes.
 

@@ -24,6 +24,7 @@ for the exported client methods, types, and errors.
 > returns a 404. Install the release package from GitHub by URL:
 
 ```bash
+echo "allow-remote=root" >> .npmrc   # npm 12+ refuses package URLs without it
 npm install https://github.com/Sidera-Protocol/sidera-protocol/releases/download/sdk-v0.1.0/sidera-protocol-sdk-0.1.0.tgz
 ```
 
