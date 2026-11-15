@@ -14,7 +14,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   must be sent as `MEMO_TEXT`. `Id` requires a u64 in canonical decimal.
   Changing a memo clears its stated type. `register`, `set_address` and
   `set_subname` keep their signatures, and records written before this
-  change read back as `Inferred`.
+  change read back as `Inferred`. Shipped to the testnet contract with
+  `upgrade` (WASM `6597fd034c84…`); `scripts/memo-type-demo.mjs` proves it
+  live ([receipt](docs/memo-type-receipt.json)).
 - **SDK:** `setMemoType(name, "id" | "text" | "inferred", caller)`;
   `resolve` and `subnames` honour a stated type and mark it with
   `memo.stated`; `parseMemoHint(raw, stated?)`.
