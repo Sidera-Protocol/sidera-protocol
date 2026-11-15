@@ -137,7 +137,11 @@ so integrations keep pinning one contract ID.
 ## Semantics
 
 - Names are stored **without** the `.sid` suffix.
-- Read-only lookups may extend the record's TTL (hot names never archive).
+- `resolve` and `primary_name` extend the record's TTL **when they run in a
+  submitted transaction**. A simulated call, which is how the SDK, the
+  dashboard and most wallets read, changes nothing on-chain and does not
+  extend it. A name that is read often but never written can still archive;
+  see [Known limitations](KNOWN-LIMITATIONS.md) for keeping names live.
 - All state-changing calls require the signing owner's (or payer's)
   authorization; owner updates (`set_address`, `transfer`) also require the
   name to be active.

@@ -12,6 +12,15 @@ const input =
 /** Byte length, as the contract counts it. */
 const bytes = (s: string) => new TextEncoder().encode(s).length;
 
+const U64_MAX = 18_446_744_073_709_551_615n;
+/**
+ * How wallets will send this memo, mirroring the SDK's `parseMemoHint`: digits
+ * without a leading zero that fit a u64 go out as MEMO_ID, anything else as
+ * MEMO_TEXT. The registry stores text only, so the owner must see this choice.
+ */
+const memoKind = (m: string): "id" | "text" | null =>
+  m.length === 0 ? null : /^(0|[1-9]\d{0,19})$/.test(m) && BigInt(m) <= U64_MAX ? "id" : "text";
+
 /**
  * Subnames and profile records of one name the user owns. Every change is a
  * transaction the owner approves in Freighter.
@@ -23,6 +32,7 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
   const [label, setLabel] = useState("");
   const [address, setAddress] = useState(owner);
   const [memo, setMemo] = useState("");
+  const [idConfirmed, setIdConfirmed] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,12 +74,15 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
         ? "1–32 of a–z, 0–9 and inner hyphens"
         : null;
   const memoProblem = bytes(memo) > 28 ? "at most 28 bytes" : null;
+  const kind = memoKind(memo);
+  const needsIdConfirm = kind === "id" && !idConfirmed;
 
   async function addSubname() {
     const ok = await run("add", () => saveSubname(owner, name, cleanLabel, address.trim(), memo));
     if (ok) {
       setLabel("");
       setMemo("");
+      setIdConfirmed(false);
     }
   }
 
@@ -107,7 +120,7 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
                   <p className="font-mono text-gray-100">{s.fullName}</p>
                   <p className="truncate font-mono text-xs text-gray-500">
                     {s.address}
-                    {s.memo ? ` · memo ${s.memo.value}` : ""}
+                    {s.memo ? ` · memo ${s.memo.value} (${s.memo.type === "id" ? "MEMO_ID" : "MEMO_TEXT"})` : ""}
                   </p>
                 </div>
                 <button
@@ -133,15 +146,46 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
         >
           <input aria-label="Subname label" placeholder="pay" value={label} onChange={(e) => setLabel(e.target.value)} className={input} />
           <input aria-label="Subname address" placeholder="G… address" value={address} onChange={(e) => setAddress(e.target.value)} className={input} />
-          <input aria-label="Subname memo" placeholder="memo (optional)" value={memo} onChange={(e) => setMemo(e.target.value)} className={input} />
+          <input
+            aria-label="Subname memo"
+            placeholder="memo (optional)"
+            value={memo}
+            onChange={(e) => {
+              setMemo(e.target.value);
+              setIdConfirmed(false);
+            }}
+            aria-describedby="subname-memo-kind"
+            className={input}
+          />
           <button
             type="submit"
-            disabled={busy != null || cleanLabel.length === 0 || labelProblem != null || memoProblem != null || address.trim().length === 0}
+            disabled={busy != null || cleanLabel.length === 0 || labelProblem != null || memoProblem != null || needsIdConfirm || address.trim().length === 0}
             className="flex items-center justify-center gap-1.5 rounded-lg bg-star-600 px-3 py-2 text-sm text-white hover:bg-star-500 disabled:opacity-50"
           >
             {busy === "add" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden /> : <Plus className="h-4 w-4" aria-hidden />} Save
           </button>
         </form>
+        {kind != null && memoProblem == null && (
+          <div id="subname-memo-kind" className="mt-2 text-xs">
+            {kind === "text" ? (
+              <p className="text-gray-400">
+                Wallets will send this memo as <b>MEMO_TEXT</b>, exactly as typed.
+              </p>
+            ) : (
+              <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-amber-200">
+                <p>
+                  Wallets will send <code className="font-mono">{memo}</code> as a <b>MEMO_ID</b> (a number), not as text.
+                  Sidera cannot send a number as MEMO_TEXT yet. If the receiver expects this deposit memo as text, a
+                  payment to this name may not be credited, so don&apos;t save it.
+                </p>
+                <label className="mt-2 flex items-center gap-2">
+                  <input type="checkbox" checked={idConfirmed} onChange={(e) => setIdConfirmed(e.target.checked)} />
+                  The receiver accepts this memo as a MEMO_ID
+                </label>
+              </div>
+            )}
+          </div>
+        )}
         {(labelProblem || memoProblem) && (
           <p className="mt-1 text-xs text-red-400">{labelProblem ? `Label: ${labelProblem}` : `Memo: ${memoProblem}`}</p>
         )}

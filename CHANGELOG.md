@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **SDK install:** the SDK is attached to a GitHub release
+  (`sdk-v0.1.0`) and the docs install it by URL; it is not on the npm
+  registry yet.
+- **Integration guide:** the direct `@stellar/stellar-sdk` example used
+  `new contract.Client(options)`, which throws in v14, and read the `Result`
+  without unwrapping it. It now uses `contract.Client.from` and
+  `result.unwrap()`.
+- **Memo types in the dashboard:** the subname form shows whether a memo
+  will be sent as `MEMO_ID` or `MEMO_TEXT`, and won't save a numeric memo
+  until the owner confirms the receiver accepts a `MEMO_ID`.
+- **TTL docs:** simulated lookups, which the SDK, dashboard and wallets use,
+  don't extend a name's TTL; only submitted `resolve` / `primary_name` calls
+  do. The docs said hot names never archive.
+
 ### Added
 - **Subnames:** the owner of `alice` can create `pay.alice` with its own
   address and memo, for free (`set_subname`, `remove_subname`, `subnames`;

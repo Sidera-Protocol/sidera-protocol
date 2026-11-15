@@ -26,15 +26,24 @@ not a hidden gap.
   `registered` / `renewed` events.
 - **The testnet prices are demo values** (50 / 10 / 2 XLM per year). Real
   prices are a decision for the mainnet launch.
-- **Storage can outlive its TTL less than the registration.** Paid writes
+- **A name's storage can archive before its registration ends.** Paid writes
   extend a name's entries to the network's maximum TTL, which can be shorter
-  than a 10-year registration. If a name is neither renewed, updated nor
-  resolved for that long, its entries archive and must be restored (a
-  standard Soroban restore) before use. The registration itself is not lost.
+  than a 10-year registration. Lookups only extend the TTL when `resolve` or
+  `primary_name` is *submitted* as a transaction; the simulated reads the
+  SDK, the dashboard and wallets make do not. So a name that is looked up
+  often but never renewed, updated or resolved in a submitted transaction
+  still archives after that time, and must be restored (a standard Soroban
+  restore, for example `stellar contract restore`) before use. The
+  registration itself is not lost. To keep a name live, renew or update it,
+  or submit a `resolve` or a `stellar contract extend` for its entries before
+  the TTL runs out.
 - **The memo type is inferred, not stored.** A memo is stored as text, and
   wallets send digits (no leading zero, fits a u64) as `MEMO_ID` and anything
   else as `MEMO_TEXT`. An exchange that expects a numeric memo as
-  `MEMO_TEXT` cannot say so yet. `MEMO_HASH` and `MEMO_RETURN` are not
+  `MEMO_TEXT` cannot say so yet, so don't use Sidera for that exchange's
+  deposits. The dashboard's subname form shows which type each memo will be
+  sent as, and won't save a numeric memo until the owner confirms the
+  receiver accepts a `MEMO_ID`. `MEMO_HASH` and `MEMO_RETURN` are not
   supported.
 - **Subnames are one level deep and belong to the parent's owner.**
   `pay.alice` works; `a.pay.alice` does not. A subname has no owner of its
