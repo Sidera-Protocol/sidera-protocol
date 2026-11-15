@@ -8,10 +8,15 @@ The contract every Sidera-compatible wallet and payment app codes against.
 fn resolve(env: Env, name: String) -> Result<Resolution, RegistryError>;
 
 struct Resolution {
-    address: Address,       // G- or M-address receiving the payment
+    address: MuxedAddress,  // G-, M- or C-address receiving the payment
     memo:    Option<String> // memo hint required by the destination
 }
 ```
+
+`address` is a `MuxedAddress`, so a muxed (M-) destination resolves exactly
+as it was set, id included. It accepts plain `Address` values too: records
+written before muxed support read back as the plain address they were, and
+clients that pass a G- or C-address keep working unchanged.
 
 `resolve` fails with `NotFound` (code 1) for names that were never registered
 or were released, and with `NameExpired` (code 6) for names past their expiry
@@ -25,7 +30,7 @@ Wallet rules:
    abort with an explicit user warning. A memo-hinted payment sent without
    a memo is the #1 way funds are lost on Stellar — Sidera's core reason
    to exist.
-3. Display the resolved G-address alongside the name for verification.
+3. Display the resolved G- or M-address alongside the name for verification.
    Resolve again right before sending and stop if the address or memo
    changed since the user confirmed them.
 4. Treat `NameExpired` like `NotFound`: never pay an expired name, and never
@@ -44,7 +49,9 @@ fn set_primary_name(
 ```
 
 - `set_primary_name` requires `address` to authorize the write **and** the
-  name to be active, owned by `address`, and resolving to `address`.
+  name to be active, owned by `address`, and resolving to `address` itself.
+  A name that resolves to a muxed address of `address` does not qualify: it
+  pays a virtual account, not `address`.
   Otherwise it fails (`NotFound`, `NameExpired` or `Unauthorized`), so no one
   can display a name that does not point to them.
 - `primary_name` returns the preferred `.sid` name only while it still matches
@@ -56,7 +63,7 @@ fn set_primary_name(
 ## Registration, renewal and expiry
 
 ```rust
-fn register(env: Env, name: String, owner: Address, address: Address,
+fn register(env: Env, name: String, owner: Address, address: MuxedAddress,
             memo: Option<String>, years: u32) -> Result<u64, RegistryError>;
 fn renew(env: Env, name: String, payer: Address, years: u32) -> Result<u64, RegistryError>;
 fn expires_at(env: Env, name: String) -> Result<u64, RegistryError>;
@@ -101,7 +108,7 @@ transfer and re-registration of released names. An owner may hold at most
 
 ```rust
 fn set_subname(env: Env, parent: String, label: String, caller: Address,
-               address: Address, memo: Option<String>) -> Result<(), RegistryError>;
+               address: MuxedAddress, memo: Option<String>) -> Result<(), RegistryError>;
 fn remove_subname(env: Env, parent: String, label: String, caller: Address)
     -> Result<(), RegistryError>;
 fn subnames(env: Env, parent: String) -> Map<String, Resolution>; // label → record

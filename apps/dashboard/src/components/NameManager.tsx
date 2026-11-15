@@ -145,7 +145,7 @@ export default function NameManager({ name, owner }: { name: string; owner: stri
           }}
         >
           <input aria-label="Subname label" placeholder="pay" value={label} onChange={(e) => setLabel(e.target.value)} className={input} />
-          <input aria-label="Subname address" placeholder="G… address" value={address} onChange={(e) => setAddress(e.target.value)} className={input} />
+          <input aria-label="Subname address" placeholder="G… or M… address" value={address} onChange={(e) => setAddress(e.target.value)} className={input} />
           <input
             aria-label="Subname memo"
             placeholder="memo (optional)"

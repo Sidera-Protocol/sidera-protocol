@@ -45,6 +45,10 @@ not a hidden gap.
   sent as, and won't save a numeric memo until the owner confirms the
   receiver accepts a `MEMO_ID`. `MEMO_HASH` and `MEMO_RETURN` are not
   supported.
+- **A name that pays a muxed (M-) address can't be a primary name.** Reverse
+  resolution maps a plain account to a name. A name pointing to
+  `M…` (a virtual account of `G…`) doesn't point to `G…` itself, so `G…`
+  can't claim it as its primary name.
 - **Subnames are one level deep and belong to the parent's owner.**
   `pay.alice` works; `a.pay.alice` does not. A subname has no owner of its
   own: whoever owns `alice` can change or delete `pay.alice` at any time, and
