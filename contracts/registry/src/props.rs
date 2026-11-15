@@ -48,6 +48,7 @@
 use super::*;
 use proptest::prelude::*;
 use soroban_sdk::testutils::{Address as _, Ledger as _};
+use soroban_sdk::MuxedAddress;
 
 // ---------------------------------------------------------------------------
 // Shared world: one fresh env + registry per case
@@ -194,7 +195,7 @@ proptest! {
 
         // Round-trip: the record resolves with the exact inputs.
         let resolution = w.client().resolve(&name);
-        prop_assert_eq!(resolution.address, dest);
+        prop_assert_eq!(resolution.address, MuxedAddress::from(&dest));
         prop_assert_eq!(resolution.memo, None);
         prop_assert_eq!(w.client().owner_of(&name), owner);
     }
@@ -255,7 +256,7 @@ proptest! {
         // The original record survives untouched — first-come-first-served
         // must be absolute, not last-writer-wins.
         let resolution = w.client().resolve(&name);
-        prop_assert_eq!(resolution.address, dest_a);
+        prop_assert_eq!(resolution.address, MuxedAddress::from(&dest_a));
         prop_assert_eq!(resolution.memo, Some(w.name(&memo_a)));
         prop_assert_eq!(w.client().owner_of(&name), owner_a);
     }
@@ -279,7 +280,7 @@ proptest! {
         w.client().register(&name, &owner, &dest, &memo_opt, &1);
 
         let resolution = w.client().resolve(&name);
-        prop_assert_eq!(resolution.address, dest);
+        prop_assert_eq!(resolution.address, MuxedAddress::from(&dest));
         prop_assert_eq!(resolution.memo, memo_opt,
             "memo must round-trip byte-exact through register -> resolve");
     }
@@ -308,10 +309,10 @@ proptest! {
         w.client().set_address(&name_a, &owner, &dest_a_new, &Some(w.name(&memo2)));
 
         let a = w.client().resolve(&name_a);
-        prop_assert_eq!(a.address, dest_a_new);
+        prop_assert_eq!(a.address, MuxedAddress::from(&dest_a_new));
         prop_assert_eq!(a.memo, Some(w.name(&memo2)));
         let b = w.client().resolve(&name_b);
-        prop_assert_eq!(b.address, dest_b,
+        prop_assert_eq!(b.address, MuxedAddress::from(&dest_b),
             "an update to one name must never bleed into another name's record");
         prop_assert_eq!(b.memo, Some(w.name(&memo2)));
     }
@@ -337,7 +338,7 @@ proptest! {
         }
         let resolution = w.client().resolve(&name);
         prop_assert_eq!(resolution.memo, memo_opt);
-        prop_assert_eq!(resolution.address, dest);
+        prop_assert_eq!(resolution.address, MuxedAddress::from(&dest));
     }
 }
 
@@ -424,7 +425,7 @@ proptest! {
                     // only legal outcome.
                     w.client().set_address(&key, &owner, &new_dest, &memo_opt);
                     let resolution = w.client().resolve(&key);
-                    prop_assert_eq!(resolution.address, new_dest);
+                    prop_assert_eq!(resolution.address, MuxedAddress::from(&new_dest));
                     prop_assert_eq!(resolution.memo, memo_opt);
                 }
             }

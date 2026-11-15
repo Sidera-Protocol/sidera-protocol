@@ -199,6 +199,18 @@
                     "val": {
                       "string": "1029384756"
                     }
+                  },
+                  {
+                    "key": {
+                      "symbol": "memo_type"
+                    },
+                    "val": {
+                      "vec": [
+                        {
+                          "symbol": "Inferred"
+                        }
+                      ]
+                    }
                   }
                 ]
               }

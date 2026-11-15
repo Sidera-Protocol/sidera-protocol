@@ -1,0 +1,56 @@
+{
+  "network": "testnet",
+  "contractId": "CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT",
+  "sdk": "@sidera-protocol/sdk (packages/sdk)",
+  "steps": [
+    {
+      "what": "a name written before memo types reads as inferred",
+      "name": "exchange-user.sid",
+      "memo": {
+        "type": "id",
+        "value": "48151623"
+      },
+      "ok": true
+    },
+    {
+      "what": "the exchange states that a numeric memo is MEMO_TEXT",
+      "name": "text.demo-exchange.sid",
+      "hashes": [
+        "b90d21ead3af690cfde5ef78ca240180cc54bf7556601bc042c39f1e8fd7c699",
+        "034a00ceda8b98167602d0431399433df6b5fc902b11703dcaa0c4b41d8041d9"
+      ],
+      "memo": {
+        "type": "text",
+        "value": "2002",
+        "stated": true
+      },
+      "ok": true
+    },
+    {
+      "what": "Bob pays by name; Horizon shows memo 2002 sent as MEMO_TEXT",
+      "hash": "10d458925103be73c493e08624a68826fd2480113545117496fdbd1ac1da5889",
+      "memo_type": "text",
+      "memo": "2002",
+      "ok": true
+    },
+    {
+      "what": "changing the memo clears the stated type",
+      "hash": "5736cb18b030c0c07a118ff6a6b9d571f3b31df9c90fe3e63d348f9abc0c9df3",
+      "memo": {
+        "type": "id",
+        "value": "2003"
+      },
+      "ok": true
+    },
+    {
+      "what": "MEMO_ID for a memo that is not a u64 is refused",
+      "refusedWith": "InvalidMemo",
+      "ok": true
+    },
+    {
+      "what": "a stranger can't state a memo type",
+      "refusedWith": "Unauthorized",
+      "ok": true
+    }
+  ]
+}

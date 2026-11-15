@@ -71,11 +71,13 @@ dashboard screen land in the same pull request.
 | Network | Stellar **Testnet** |
 | Deployed | 2026-11-12 (pricing, renewals, expiry, owner name lists, admin upgrades) |
 | Contract ID | `CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT` |
-| WASM sha256 | `42f55fba36cbcb871c90981e83e27c505965f06f9ad32a6b275f112ff00f524a` (43,167 bytes, `stellar contract optimize`; upgraded in place on 2026-11-13 for subnames and profile records) |
+| WASM sha256 | `6597fd034c842a10c4292189b4e018a23a96c519e44ebabf1cc0f596f751bbd8` (49,820 bytes, `stellar contract optimize`; upgraded in place on 2026-11-15 for memo types, after the same day's muxed-address upgrade `70cf31415ae7…`; every existing name, subname, primary name and owner list unchanged, read back with the published SDK v0.1.0) |
 | Payment | Native XLM; 50 / 10 / 2 XLM per year for 3 / 4 / 5+ character names (testnet demo prices) |
 | Live round-trip | Through the SDK: register for 2 years (treasury received 4 XLM) → resolve with memo → renewal paid by another account (+2 XLM, owner unchanged) → primary name → an impostor's primary-name claim refused → duplicate registration refused → the owner's names listed from the registry. Then: a non-admin upgrade refused, an admin upgrade applied, and every name, list and primary name unchanged afterwards. |
 | Pay by name | An exchange registered `exchange-user` with deposit memo `48151623`; Bob paid 10 XLM by name and Horizon shows the payment arrived with that memo. A 29-byte memo was refused. [Receipt](docs/pay-by-name-receipt.json). |
 | Subnames | An exchange gave customers `alice.demo-exchange` (memo `1001`) and `bob.demo-exchange` (memo `1002`); Bob paid `alice.demo-exchange.sid` and the payment arrived with memo 1001. A non-owner's subname was refused; a deleted one stopped resolving. [Receipt](docs/subnames-receipt.json). |
+| Muxed addresses | An exchange registered `muxed-demo` paying a customer's M-address (mux id `4242424242`); `resolve` returned that exact M-address, and Bob's 1 XLM payment by name arrived at that mux id on Horizon. Repointing to another id and a muxed subname resolved exactly; the base account's primary-name claim was refused. [Receipt](docs/muxed-receipt.json). |
+| Memo types | An exchange gave a customer `text.demo-exchange` with the numeric memo `2002` and stated it is `MEMO_TEXT`; Bob paid by name and Horizon shows the memo sent as `MEMO_TEXT`. A name written before memo types (`exchange-user`) still reads as inferred; a changed memo cleared its type; a non-u64 `MEMO_ID` and a stranger's change were refused. [Receipt](docs/memo-type-receipt.json). |
 
 Every transaction is linked in the [smoke receipt](docs/testnet-smoke-receipt.json).
 Explorer: <https://lab.stellar.org/r/testnet/contract/CD4YE4ERU37U5KQU3QCJJGIKUSES6QXA6WNLIMORRBY62RD37SC6FGUT>

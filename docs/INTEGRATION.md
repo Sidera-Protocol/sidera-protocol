@@ -55,12 +55,14 @@ const registry = await contract.Client.from({
 export async function resolveSid(name: string): Promise<{
   address: string;
   memo: string | null;
+  memoType: "Inferred" | "Id" | "Text";
 }> {
   const { result } = await registry.resolve({ name });
   const record = result.unwrap(); // throws for an unknown or expired name
   return {
     address: record.address.toString(),
     memo: record.memo ?? null,
+    memoType: record.memo_type.tag, // see "Memo types" below
   };
 }
 ```
@@ -142,12 +144,24 @@ same with Freighter.
 (the SDK strips `.sid`). The rules above apply unchanged; in particular,
 attach the subname's own memo, not the parent's. An exchange can give every
 customer a name such as `alice.exchange.sid` whose memo is that customer's
-deposit number, **provided the exchange accepts that number as a `MEMO_ID`**.
-The registry stores memos as text and wallets send a plain number as
-`MEMO_ID`; an exchange that needs a numeric deposit memo as `MEMO_TEXT` can't
-be served yet (see [Known limitations](KNOWN-LIMITATIONS.md)). The dashboard
-shows which type a memo will go out as and asks the owner to confirm numeric
-ones.
+deposit number. If the exchange needs that number as `MEMO_TEXT` rather than
+`MEMO_ID`, it states so once per name with `set_memo_type` (SDK:
+`setMemoType("alice.exchange", "text", owner)`); see
+[Memo types](#memo-types).
+
+## Memo types
+
+Each record carries `memo_type`: `Inferred`, `Id` or `Text`.
+
+- `Id` / `Text`: the owner stated how the memo must be sent. Send it exactly
+  that way; a numeric memo marked `Text` goes out as `MEMO_TEXT`.
+- `Inferred`: nothing stated. Send digits with no leading zero that fit a u64
+  as `MEMO_ID`, and anything else as `MEMO_TEXT`, byte for byte.
+
+The SDK applies this for you: `resolve(...).memo` has the right `type`, and
+`stated: true` when the owner stated it. Records written before memo types
+existed read as `Inferred`. Changing a memo with `set_address` or
+`set_subname` clears its stated type, because it was stated for the old memo.
 
 ## Watching for changes
 
@@ -160,6 +174,7 @@ topic, so indexers can subscribe once and filter by name or by event:
 | `address_set` | `("address_set", name)` | `(caller, address, memo)` | Payment record updated |
 | `subname_set` | `("subname_set", parent)` | `(label, caller, record)` | Subname `label.parent` set, or deleted (`record` is `None`) |
 | `record_set` | `("record_set", name)` | `(caller, key, value)` | Profile record set, or deleted (`value` is `None`) |
+| `memo_type_set` | `("memo_type_set", name)` | `(caller, memo_type)` | A name's memo type stated or cleared (for a subname, `subname_set` carries the updated record) |
 | `transferred` | `("transferred", name)` | `(caller, new_owner)` | Ownership moved |
 | `primary_name_set` | `("primary_name_set", address)` | `(name)` | Preferred reverse name changed |
 
