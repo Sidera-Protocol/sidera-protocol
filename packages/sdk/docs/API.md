@@ -29,12 +29,14 @@ Accepts a bare name or a `.sid` name and returns:
   name: string;
   fullName: string;
   address: string;
-  memo: { type: "id" | "text"; value: string } | null;
+  memo: { type: "id" | "text"; value: string; stated?: true } | null;
 }
 ```
 
 The returned memo is ready to convert to a Stellar `MEMO_ID` or `MEMO_TEXT`
-value. A missing name raises `NameNotFoundError`.
+value. Its `type` follows the type the name's owner stated (then
+`stated: true`); otherwise it is inferred: digits that fit a u64 → `id`,
+anything else → `text`. A missing name raises `NameNotFoundError`.
 
 ### `ownerOf(name)`
 
@@ -92,8 +94,13 @@ before signing (found during preparation) or after confirmation.
 - `setAddress({ name, address, memo? }, caller, options?)` changes its
   destination and optional memo hint.
 - `transfer({ name, from, to }, options?)` transfers ownership.
+- `setMemoType(name, memoType, caller, options?)` states how the memo of a
+  name or subname (`pay.alice`) must be sent: `"id"` (MEMO_ID), `"text"`
+  (MEMO_TEXT, even if all digits) or `"inferred"` to clear it. `"id"` needs a
+  memo that fits a u64. Changing the memo later clears the type.
 
-`setAddress`, `transfer` and `setPrimaryName` return the transaction hash.
+`setAddress`, `transfer`, `setPrimaryName` and `setMemoType` return the
+transaction hash.
 
 The caller/owner address must match the account that signs the transaction.
 The SDK validates names before submission, but the contract remains the final
@@ -110,5 +117,5 @@ Use the exported typed errors instead of matching message strings:
 - `NameExpiredError` (the name expired; renew it during the grace period)
 - `SideraError` for other RPC or contract failures
 
-`parseMemoHint` parses a registry memo hint, `toStellarMemo` converts it to a
-Stellar memo, and the name helpers normalize and validate `.sid` input.
+`parseMemoHint(raw, stated?)` parses a registry memo hint (honouring a stated
+`"id"` / `"text"` type), `toStellarMemo` converts it to a Stellar memo, and the name helpers normalize and validate `.sid` input.

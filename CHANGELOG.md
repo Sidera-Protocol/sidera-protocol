@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Memo types** (#9): every record carries `memo_type` (`Inferred`, `Id` or
+  `Text`), and the owner states it with `set_memo_type(name, caller, type)`
+  for a name or a subname. An exchange can now say a numeric deposit memo
+  must be sent as `MEMO_TEXT`. `Id` requires a u64 in canonical decimal.
+  Changing a memo clears its stated type. `register`, `set_address` and
+  `set_subname` keep their signatures, and records written before this
+  change read back as `Inferred`.
+- **SDK:** `setMemoType(name, "id" | "text" | "inferred", caller)`;
+  `resolve` and `subnames` honour a stated type and mark it with
+  `memo.stated`; `parseMemoHint(raw, stated?)`.
+- **Dashboard:** the subname form asks how the receiver expects a numeric
+  memo (`MEMO_ID` or `MEMO_TEXT`) and saves that choice on-chain; the Send
+  page shows when the type was stated by the receiver.
+
 ### Fixed
 - **Muxed (M-) addresses:** `register`, `set_address` and `set_subname`
   failed on-chain with `Error(WasmVm, InvalidAction)` for an M-address,

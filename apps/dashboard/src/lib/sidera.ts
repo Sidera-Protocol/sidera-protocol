@@ -421,17 +421,32 @@ export async function nameExtras(name: string): Promise<{ subnames: SubnameView[
   return { subnames, records };
 }
 
-/** Create or update `label.parent`, signed by the parent's owner in Freighter. */
-export async function saveSubname(owner: string, parent: string, label: string, address: string, memo: string): Promise<void> {
+/**
+ * Create or update `label.parent`, signed by the parent's owner in Freighter.
+ * `numericAs` is how a numeric memo must be sent; when given, its type is
+ * stated on-chain too (a second approval), so wallets never have to guess.
+ */
+export async function saveSubname(
+  owner: string,
+  parent: string,
+  label: string,
+  address: string,
+  memo: string,
+  numericAs: "id" | "text" | null = null,
+): Promise<void> {
   const cleanMemo = memo.length > 0 ? memo : undefined;
+  const cleanLabel = label.trim().toLowerCase();
   if (DEMO_MODE) {
     const { parseMemoHint } = await import("@sidera-protocol/sdk");
     await new Promise((r) => setTimeout(r, 500));
-    DEMO_SUBNAMES[parent] = { ...DEMO_SUBNAMES[parent], [label.trim().toLowerCase()]: { address, memo: parseMemoHint(cleanMemo) } };
+    DEMO_SUBNAMES[parent] = { ...DEMO_SUBNAMES[parent], [cleanLabel]: { address, memo: parseMemoHint(cleanMemo, numericAs) } };
     return;
   }
   const client = await writeClient(owner);
   await client.setSubname({ parent, label, address, memo: cleanMemo }, owner);
+  if (cleanMemo != null && numericAs != null) {
+    await client.setMemoType(`${cleanLabel}.${parent}`, numericAs, owner);
+  }
 }
 
 /** Delete `label.parent`, signed by the parent's owner in Freighter. */
